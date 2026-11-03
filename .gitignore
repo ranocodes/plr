@@ -1,0 +1,7 @@
+node_modules
+.next
+out
+data/registry.json
+data/registry.json.tmp
+npm-debug.log*
+.DS_Store
