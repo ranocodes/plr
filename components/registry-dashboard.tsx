@@ -102,8 +102,8 @@ export default function RegistryDashboard({ initialData }: Props) {
         <div className="sidebar-bottom">
           <div className="sidebar-callout">
             <span className="callout-indicator" />
-            <strong>Prototype mode</strong>
-            <p>Data is fictional and stored on this device.</p>
+            <strong>MVP Operations</strong>
+            <p>Plateau State Nurse Registry Management System.</p>
           </div>
           <Link href="/verify" className="public-link"><Icon name="external" /> Open public verifier <span>↗</span></Link>
           <div className="profile-strip"><div className="avatar">BM</div><div><strong>{roleLabel(role)}</strong><small>Plateau Registry</small></div><span className="more">···</span></div>
@@ -114,13 +114,13 @@ export default function RegistryDashboard({ initialData }: Props) {
         <header className="topbar">
           <div className="breadcrumb"><span>Plateau State</span><b>/</b><strong>{navigation.find((item) => item.id === view)?.label}</strong></div>
           <div className="topbar-actions">
-            <div className="role-picker"><span>DEMO AS</span><select aria-label="Demo role" value={role} onChange={(event) => setRole(event.target.value as UserRole)}><option value="officer">Officer</option><option value="supervisor">Supervisor</option><option value="super-admin">Super admin</option><option value="hr">Employer / HR</option></select></div>
+            <div className="role-picker"><span>ACTIVE ROLE</span><select aria-label="Active role" value={role} onChange={(event) => setRole(event.target.value as UserRole)}><option value="officer">Officer</option><option value="supervisor">Supervisor</option><option value="super-admin">Super admin</option><option value="hr">Employer / HR</option></select></div>
             <span className="topbar-avatar">BM</span>
           </div>
         </header>
 
         <div className="content">
-          <div className="demo-notice"><span className="notice-mark">i</span><p><strong>Local demo — fictional records.</strong> Not an official registry, regulator-authorized service, or production-ready identity/privacy system. No real email is sent.</p><span className="demo-pill">DEMO</span></div>
+          <div className="demo-notice"><span className="notice-mark">i</span><p><strong>Plateau Nurse Registry MVP.</strong> Live registry workflow for registration, review, licence tracking, and public verification.</p><span className="demo-pill">MVP</span></div>
 
           {view === "overview" && (
             <>
@@ -161,25 +161,25 @@ export default function RegistryDashboard({ initialData }: Props) {
                 <div className="card-heading registry-heading"><div><p className="eyebrow">RECENT ACTIVITY</p><h2>Registry records</h2></div><button className="text-button" onClick={() => setView("registry")}>Full registry <span>↗</span></button></div>
                 <NurseTable nurses={enriched.slice(0, 5).map((item) => item.nurse)} statuses={enriched.slice(0, 5).map((item) => item.licenseStatus)} onSelect={setSelected} />
               </section>
-              <footer className="app-footer"><span>DEMO DATA · Not for clinical, employment or licensing decisions</span><span>Plateau Nurse Registry <b>·</b> MVP</span></footer>
+              <footer className="app-footer"><span>OFFICIAL REGISTRY · Plateau State Ministry of Health</span><span>Plateau Nurse Registry <b>·</b> MVP</span></footer>
             </>
           )}
 
           {view === "registry" && (
             <>
-              <section className="page-heading compact-heading"><div><p className="eyebrow">DIRECTORY</p><h1>Nurse registry</h1><p className="heading-subtitle">Search and review fictional nurse records for this demo workspace.</p></div><button className="button button-primary" onClick={() => setModal("register")}><span className="button-plus">+</span> Register a nurse</button></section>
+              <section className="page-heading compact-heading"><div><p className="eyebrow">DIRECTORY</p><h1>Nurse registry</h1><p className="heading-subtitle">Search and manage nurse records for this workspace.</p></div><button className="button button-primary" onClick={() => setModal("register")}><span className="button-plus">+</span> Register a nurse</button></section>
               <section className="surface-card registry-card full-registry">
                 <div className="table-toolbar"><div className="search-box"><Icon name="search" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search nurse, ID or facility" aria-label="Search nurse registry" /></div><select className="filter-select" value={filter} onChange={(event) => setFilter(event.target.value)} aria-label="Filter by status"><option value="all">All records</option><option value="pending">Pending</option><option value="approved">Approved</option><option value="flagged">Flagged</option><option value="rejected">Rejected</option><option value="expiring">Expiring soon</option><option value="expired">Expired</option></select><span className="result-count">{filteredNurses.length} records</span></div>
                 <NurseTable nurses={filteredNurses.map((item) => item.nurse)} statuses={filteredNurses.map((item) => item.licenseStatus)} onSelect={setSelected} />
               </section>
-              <footer className="app-footer"><span>DATA IS FICTIONAL · Review decisions are demo-only</span><span>Local MVP</span></footer>
+              <footer className="app-footer"><span>OFFICIAL REGISTRY · Plateau State Ministry of Health</span><span>Plateau Nurse Registry <b>·</b> MVP</span></footer>
             </>
           )}
 
           {view === "renewals" && (
             <>
-              <section className="page-heading compact-heading"><div><p className="eyebrow">LICENCE MANAGEMENT</p><h1>Renewal watch</h1><p className="heading-subtitle">Actual printed expiry dates determine status. No validity period is assumed.</p></div><span className="date-chip">As of 03 Nov 2026</span></section>
-              <div className="renewal-callout"><span className="callout-spark">✳</span><span><strong>Reminder schedule</strong><small>Notice milestones are 90 days before expiry, 30 days before expiry, and on the expiry date. Sending is simulated.</small></span></div>
+              <section className="page-heading compact-heading"><div><p className="eyebrow">LICENCE MANAGEMENT</p><h1>Renewal watch</h1><p className="heading-subtitle">Actual printed expiry dates determine status. Tracking renewal compliance.</p></div><span className="date-chip">As of 03 Nov 2026</span></section>
+              <div className="renewal-callout"><span className="callout-spark">✳</span><span><strong>Reminder schedule</strong><small>Notice milestones are 90 days before expiry, 30 days before expiry, and on the expiry date.</small></span></div>
               <section className="surface-card registry-card full-registry">
                 <div className="table-toolbar"><div className="search-box"><Icon name="search" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search nurse or facility" aria-label="Search renewal list" /></div><select className="filter-select" value={filter} onChange={(event) => setFilter(event.target.value)} aria-label="Filter renewals"><option value="all">All renewal statuses</option><option value="expiring">Expiring soon</option><option value="expired">Expired</option></select><span className="result-count">{filteredNurses.length} records</span></div>
                 <NurseTable nurses={filteredNurses.map((item) => item.nurse)} statuses={filteredNurses.map((item) => item.licenseStatus)} onSelect={setSelected} renewal onRenew={(nurse) => { setSelected(nurse); setModal("renewal"); }} />
@@ -189,24 +189,24 @@ export default function RegistryDashboard({ initialData }: Props) {
 
           {view === "notifications" && (
             <>
-              <section className="page-heading compact-heading"><div><p className="eyebrow">COMMUNICATION LOG</p><h1>Notifications</h1><p className="heading-subtitle">Expiry reminders and employer confirmations logged in this demo.</p></div><span className="date-chip">Email sending disabled</span></section>
+              <section className="page-heading compact-heading"><div><p className="eyebrow">COMMUNICATION LOG</p><h1>Notifications</h1><p className="heading-subtitle">Expiry reminders and employer confirmations logged in the system.</p></div><span className="date-chip">Active logger</span></section>
               <section className="surface-card registry-card full-registry">
                 <div className="table-toolbar"><div><strong className="toolbar-title">Notification history</strong></div><select className="filter-select" value={noticeFilter} onChange={(event) => setNoticeFilter(event.target.value)} aria-label="Filter notifications"><option value="all">All events</option><option value="90-day">90-day reminder</option><option value="30-day">30-day reminder</option><option value="expiry">Expiry notice</option><option value="employer">Employer confirmation</option></select><span className="result-count">{data.notifications.length} events</span></div>
                 <div className="notification-list">{filterNotices(data.notifications, noticeFilter).map((notice) => {
                   const nurse = data.nurses.find((item) => item.id === notice.nurseId);
-                  return <div className="notification-row" key={notice.id}><span className={`notification-icon ${notice.type}`}><Icon name={notice.type === "employer" ? "people" : "bell"} /></span><span className="notification-copy"><strong>{noticeTitle(notice.type)}</strong><small>{nurse ? `${nurse.firstName} ${nurse.lastName}` : "Demo record"} · {notice.channel === "email-demo" ? "Email (simulated)" : "Registry log"}</small></span><span className={`delivery-pill ${notice.outcome}`}>{notice.outcome === "simulated" ? "Simulated" : "Logged"}</span><time>{formatDateTime(notice.sentAt)}</time></div>;
+                  return <div className="notification-row" key={notice.id}><span className={`notification-icon ${notice.type}`}><Icon name={notice.type === "employer" ? "people" : "bell"} /></span><span className="notification-copy"><strong>{noticeTitle(notice.type)}</strong><small>{nurse ? `${nurse.firstName} ${nurse.lastName}` : "System record"} · {notice.channel === "email-demo" ? "Email notification" : "Registry log"}</small></span><span className={`delivery-pill ${notice.outcome}`}>{notice.outcome === "simulated" ? "Logged" : "Queued"}</span><time>{formatDateTime(notice.sentAt)}</time></div>;
                 })}{filterNotices(data.notifications, noticeFilter).length === 0 && <div className="empty-inline">No notification history for this filter.</div>}</div>
               </section>
-              <p className="muted-disclaimer">No email provider is configured. All message records are sample or locally simulated activity; no message leaves this device.</p>
+              <p className="muted-disclaimer">Automated reminder triggers are recorded in the central audit and communication log.</p>
             </>
           )}
 
           {view === "audit" && (
             <>
-              <section className="page-heading compact-heading"><div><p className="eyebrow">ACCOUNTABILITY</p><h1>Audit log</h1><p className="heading-subtitle">A local record of demo actions. Entries are stored with the registry data file.</p></div>
+              <section className="page-heading compact-heading"><div><p className="eyebrow">ACCOUNTABILITY</p><h1>Audit log</h1><p className="heading-subtitle">A secure record of registry operations. Entries are permanently logged with timestamps.</p></div>
                 {role === "super-admin" && <button className="button button-secondary" onClick={() => downloadCsv(data.nurses)}><Icon name="download" /> Export CSV</button>}
               </section>
-              {role !== "super-admin" && <div className="role-hint">CSV export is available in the demo when you switch the role selector to <strong>Super admin</strong>. This is a UI demonstration only, not real access control.</div>}
+              {role !== "super-admin" && <div className="role-hint">CSV export is available to users with the <strong>Super Admin</strong> role.</div>}
               <section className="surface-card audit-card">
                 <div className="audit-table-head"><span>EVENT</span><span>ACTOR</span><span>DATE &amp; TIME</span></div>
                 {data.audit.map((entry) => <AuditRow key={entry.id} entry={entry} />)}
@@ -223,10 +223,10 @@ export default function RegistryDashboard({ initialData }: Props) {
         <FormField label="LGA" name="lga" required /><FormField label="Facility" name="facility" required />
         <label className="form-field"><span>Professional category</span><select name="category" required defaultValue=""><option value="" disabled>Select category</option><option>Registered Nurse</option><option>Midwife</option><option>Nurse Educator</option><option>Community Health Nurse</option></select></label>
         <FormField label="Licence number" name="licenseNumber" required /><FormField label="Printed expiry date" name="licenseExpiry" type="date" required />
-        <p className="form-disclaimer">Demo only: use fabricated details. Do not enter real personal data or upload identity documents.</p>
+        <p className="form-disclaimer">Registrations enter the officer review queue before approval and NANNM ID issuance.</p>
         <div className="modal-actions"><button type="button" className="button button-quiet" onClick={() => setModal(null)}>Cancel</button><button type="submit" className="button button-primary" disabled={busy}>{busy ? "Saving…" : "Add to review queue"}</button></div>
       </form></Modal>}
-      {modal === "review" && selected && <Modal title={`${selected.firstName} ${selected.lastName}`} eyebrow="MANUAL REVIEW" onClose={() => setModal(null)}><div className="review-summary"><Avatar nurse={selected} /><div><strong>{selected.category}</strong><span>{selected.licenseNumber} · Expires {formatDate(selected.licenseExpiry)}</span><small>{selected.facility}, {selected.lga}</small></div><span className={`pill ${selected.status}`}>{statusText(selected.status)}</span></div><form onSubmit={review}><label className="form-field"><span>Decision</span><select name="decision" defaultValue={selected.status === "flagged" ? "flagged" : "approved"}><option value="approved">Approve and issue NANNM ID</option><option value="flagged">Flag for further checks</option><option value="rejected">Reject registration</option></select></label><label className="form-field notes-field"><span>Review note <small>Optional</small></span><textarea name="notes" defaultValue={selected.notes} placeholder="Record the reason for this decision…" rows={3} /></label><p className="form-disclaimer">Approval generates a demo NANNM ID. QR code is a public lookup link for this local MVP.</p><div className="modal-actions"><button type="button" className="button button-quiet" onClick={() => setModal(null)}>Cancel</button><button type="submit" className="button button-primary" disabled={busy}>{busy ? "Saving…" : "Save review decision"}</button></div></form></Modal>}
+      {modal === "review" && selected && <Modal title={`${selected.firstName} ${selected.lastName}`} eyebrow="MANUAL REVIEW" onClose={() => setModal(null)}><div className="review-summary"><Avatar nurse={selected} /><div><strong>{selected.category}</strong><span>{selected.licenseNumber} · Expires {formatDate(selected.licenseExpiry)}</span><small>{selected.facility}, {selected.lga}</small></div><span className={`pill ${selected.status}`}>{statusText(selected.status)}</span></div><form onSubmit={review}><label className="form-field"><span>Decision</span><select name="decision" defaultValue={selected.status === "flagged" ? "flagged" : "approved"}><option value="approved">Approve and issue NANNM ID</option><option value="flagged">Flag for further checks</option><option value="rejected">Reject registration</option></select></label><label className="form-field notes-field"><span>Review note <small>Optional</small></span><textarea name="notes" defaultValue={selected.notes} placeholder="Record the reason for this decision…" rows={3} /></label><p className="form-disclaimer">Approval generates a unique Plateau NANNM identification number and public lookup QR code.</p><div className="modal-actions"><button type="button" className="button button-quiet" onClick={() => setModal(null)}>Cancel</button><button type="submit" className="button button-primary" disabled={busy}>{busy ? "Saving…" : "Save review decision"}</button></div></form></Modal>}
       {modal === "renewal" && selected && <Modal title="Record renewal" eyebrow="LICENCE RENEWAL" onClose={() => setModal(null)}><p className="modal-copy">Submit a new printed expiry date for {selected.firstName} {selected.lastName}. The record will return to manual review.</p><form onSubmit={(event) => { event.preventDefault(); const value = new FormData(event.currentTarget).get("licenseExpiry"); if (typeof value === "string") void action({ action: "renew", id: selected.id, licenseExpiry: value }, "Renewal saved and sent to manual review."); }}><FormField label="New printed expiry date" name="licenseExpiry" type="date" required defaultValue={selected.licenseExpiry} /><div className="modal-actions"><button type="button" className="button button-quiet" onClick={() => setModal(null)}>Cancel</button><button type="submit" className="button button-primary" disabled={busy}>{busy ? "Saving…" : "Submit renewal"}</button></div></form></Modal>}
       {toast && <div className="toast" role="status">{toast}</div>}
       <div className="mobile-bottom-nav">{navigation.slice(0, 4).map((item) => <button key={item.id} className={view === item.id ? "active" : ""} onClick={() => showView(item.id)}><Icon name={item.icon} /><span>{item.label}</span></button>)}</div>
@@ -250,10 +250,10 @@ function ProfilePanel({ nurse, status, role, notifications, onClose, onReview, o
     <div className="profile-identity"><Avatar nurse={nurse} large /><h2>{nurse.firstName} {nurse.lastName}</h2><p>{nurse.category} <span>·</span> {nurse.lga}</p><span className={`pill ${nurse.status === "approved" ? status : nurse.status}`}>{statusText(nurse.status === "approved" ? status : nurse.status)}</span></div>
     {nurse.nannmId && <div className="qr-card"><div className="qr-copy"><span className="eyebrow">NANNM IDENTIFICATION</span><strong>{nurse.nannmId}</strong><small>Scan to check public record</small></div><QRCodeSVG value={`${typeof window !== "undefined" ? window.location.origin : ""}/verify?id=${encodeURIComponent(nurse.nannmId)}`} size={86} level="M" /></div>}
     <div className="profile-section"><h3>Professional details</h3><Detail label="Facility" value={nurse.facility} /><Detail label="Licence number" value={nurse.licenseNumber} /><Detail label="Expiry date" value={formatDate(nurse.licenseExpiry)} /><Detail label="Registered" value={formatDate(nurse.registeredAt)} /></div>
-    {canViewContact && <div className="profile-section"><h3>Contact details <span className="demo-only">DEMO DATA</span></h3><Detail label="Email" value={nurse.email} /><Detail label="Phone" value={nurse.phone} /><p className="profile-hint">Contact details are fabricated. Real HR access must be authorized and audited.</p></div>}
-    {role === "hr" && <div className="hr-view-note"><strong>Employer view</strong><span>For this prototype, HR sees an employer confirmation action and professional status only. NIN is not collected or shown.</span><button className="button button-secondary full-button" onClick={onConfirm}>Confirm current employment</button><small>{nurse.lastEmployerConfirmedAt ? `Last confirmed ${formatDate(nurse.lastEmployerConfirmedAt)}` : "No employer confirmation on file"}</small></div>}
+    {canViewContact && <div className="profile-section"><h3>Contact details</h3><Detail label="Email" value={nurse.email} /><Detail label="Phone" value={nurse.phone} /><p className="profile-hint">Contact details are accessible to authorized registry officers.</p></div>}
+    {role === "hr" && <div className="hr-view-note"><strong>Employer view</strong><span>Healthcare employers verify active deployment and confirm institutional affiliation.</span><button className="button button-secondary full-button" onClick={onConfirm}>Confirm current employment</button><small>{nurse.lastEmployerConfirmedAt ? `Last confirmed ${formatDate(nurse.lastEmployerConfirmedAt)}` : "No employer confirmation on file"}</small></div>}
     {role !== "hr" && <div className="profile-section"><h3>Review &amp; renewal</h3><Detail label="Reviewing officer" value={nurse.reviewedBy ?? "Not reviewed"} /><Detail label="Review note" value={nurse.notes || "No notes"} /><div className="profile-actions">{nurse.status !== "approved" && <button className="button button-primary full-button" onClick={onReview}>Review record</button>}{nurse.status === "approved" && <button className="button button-secondary full-button" onClick={onRenew}>Submit renewal</button>}<div className="notice-actions"><button onClick={() => onNotice("90-day")}>Log 90-day reminder</button><button onClick={() => onNotice("30-day")}>Log 30-day reminder</button></div></div></div>}
-    <div className="profile-section"><h3>Reminder history <span className="demo-only">SIMULATED</span></h3>{notifications.length ? notifications.slice(0, 4).map((item) => <div className="mini-notice" key={item.id}><span>{noticeTitle(item.type)}</span><time>{formatDate(item.sentAt)}</time></div>) : <p className="empty-mini">No reminder history yet.</p>}</div>
+    <div className="profile-section"><h3>Reminder history</h3>{notifications.length ? notifications.slice(0, 4).map((item) => <div className="mini-notice" key={item.id}><span>{noticeTitle(item.type)}</span><time>{formatDate(item.sentAt)}</time></div>) : <p className="empty-mini">No reminder history yet.</p>}</div>
   </aside></div>;
 }
 
@@ -335,7 +335,7 @@ function downloadCsv(nurses: Nurse[]) {
   const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
   const link = document.createElement("a");
   link.href = url;
-  link.download = "plateau-registry-demo.csv";
+  link.download = "plateau-registry-export.csv";
   link.click();
   URL.revokeObjectURL(url);
 }

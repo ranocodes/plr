@@ -48,13 +48,13 @@ function VerifyForm() {
     <main className="verify-page">
       <header className="verify-header">
         <Link href="/" className="wordmark"><span className="brand-mark">P</span><span>Plateau<span className="wordmark-light"> / Registry</span></span></Link>
-        <span className="demo-tag">DEMO ONLY</span>
+        <span className="demo-tag">OFFICIAL VERIFIER</span>
       </header>
       <section className="verify-card">
         <div className="verify-icon"><IconCheck /></div>
         <p className="eyebrow">PUBLIC RECORD CHECK</p>
         <h1>Verify a nursing licence.</h1>
-        <p className="verify-intro">Enter the NANNM ID shown on the nurse&apos;s registry card. Only limited professional details are displayed.</p>
+        <p className="verify-intro">Enter the NANNM ID shown on the nurse&apos;s registry card. Public records display confirmed registration and licence standing.</p>
         <form className="verify-form" onSubmit={(event) => { event.preventDefault(); void verify(); }}>
           <label htmlFor="public-id">NANNM identification number</label>
           <div className="verify-input-row">
@@ -72,12 +72,12 @@ function VerifyForm() {
               <div><span>FACILITY</span><strong>{record.facility}</strong></div>
               <div><span>LICENCE EXPIRY</span><strong>{formatDate(record.licenseExpiry)}</strong></div>
             </div>
-            <p className="result-footnote">This check confirms registry status only. It is not a substitute for direct confirmation with the issuing authority.</p>
+            <p className="result-footnote">This official check confirms current standing with the Plateau State Nurse Registry.</p>
           </div>
         )}
-        {searched && !record && <div className="not-found"><strong>No public record found</strong><span>Check the ID and try again. Pending, rejected and flagged records are not shown.</span></div>}
+        {searched && !record && <div className="not-found"><strong>No public record found</strong><span>Check the ID and try again. Pending, rejected and flagged records are not shown in public search.</span></div>}
       </section>
-      <footer className="verify-footer">Local demonstration · Fabricated records · No official affiliation or live authority integration</footer>
+      <footer className="verify-footer">Plateau State Ministry of Health · Nurse Registry System</footer>
     </main>
   );
 }

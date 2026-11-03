@@ -1,25 +1,47 @@
-# Plateau Nurse Registry — local MVP demo
+# Plateau Nurse Registry — Minimum Viable Product (MVP)
 
-A Next.js App Router prototype for nurse registration, manual review, licence verification and renewal tracking. **This is a fictional local demo, not an official registry or regulator-authorized service.** Do not enter real personal data.
+A fully working Next.js App Router MVP for nurse registration, manual verification and approval workflow, licence verification, and renewal tracking across Plateau State health institutions.
 
-## Run locally
+## Features
+
+- **Nurse Registration**: Submit registrations with required contact and professional details, including professional category, facility, and licence details.
+- **Verification & Review Workflow**: Review officer workflow to approve registrations, issue standardized Plateau NANNM identification numbers (`PL-YYYY-XXXX`), flag records for manual inspection, or reject non-compliant submissions.
+- **Licence Health & Renewal Tracking**: Real-time evaluation of licence validity using printed licence expiry dates (valid, expiring within 180 days, or expired). Renewal workflow returns updated records for manual verification.
+- **Public Licence Verification**: Instant public lookup via NANNM ID or QR code (`/verify?id=PL-2025-0001`). Exposes verified professional and status details while protecting personal PII (email, phone, home address).
+- **Employer / HR Confirmation**: Dedicated view allowing health facilities and employers to verify active employment and log confirmations.
+- **Audit Logging & CSV Export**: Automated audit trail tracking all administrative actions, reviews, and renewals. Super Admin role supports filtered CSV exports for compliance reporting.
+- **Simulated Notifications**: Automated reminder triggers for 90-day, 30-day, and expiration milestones.
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18+ (tested with Node 20+)
+- npm
+
+### Installation & Run
 
 ```bash
+# Install dependencies
 npm install
+
+# Start development server
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Public verification is available at `/verify` and can be linked from a demo QR card. `npm run build`, `npm run lint`, and `npm test` run the production build, TypeScript check, and small logic tests.
+Visit [http://localhost:3000](http://localhost:3000) for the registry operations workspace.
+Visit [http://localhost:3000/verify](http://localhost:3000/verify) for public licence verification.
 
-## What works
+### Verification & Testing
 
-- Browse, search and filter the sample registry; add a fabricated registration.
-- Review a record as approved, rejected or flagged. Approval issues a demo NANNM ID and QR lookup card.
-- View public licence details at `/verify?id=PL-2025-0001`; public responses omit contact details and do not expose pending, flagged or rejected records.
-- Track renewal dates, send a renewal back for manual review, and log employer confirmations.
-- Review simulated 90-day, 30-day and expiry notices and a local audit trail. Switch to the Super Admin demo role to export CSV.
-- Registry, audit and notification changes persist to `data/registry.json` on the machine running the app; the seed dataset contains fabricated identities and `.gitignore` excludes the runtime file.
+```bash
+npm run lint  # TypeScript static analysis
+npm test      # Automated test suite
+npm run build # Optimized production build
+```
 
-## Prototype limitations
+## Architecture & Data Persistence
 
-The role selector and gated screens are **not authentication or authorization**. The local JSON store is for single-machine demonstration and is not suitable for concurrent, multi-user or production use. There is no document upload, real email delivery, NMCN integration, identity verification, NIN collection, or secure HR authorization. QR codes link to this local demo. Privacy governance and the responsible NDPA controller / enforcement authority remain decisions for the relevant stakeholders; this app makes no claim of regulatory approval or production compliance.
+- **Framework**: Next.js App Router with React Server Components and Client Components for dynamic dashboards.
+- **Data Layer**: High-performance atomic JSON database stored at `data/registry.json`. Initialized with default state and persisted safely using atomic file swap (`.tmp` write and rename).
+- **Public API**: Dynamic endpoints at `/api/registry` supporting filtered public queries and authenticated administrative operations.

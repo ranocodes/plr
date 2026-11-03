@@ -5,3 +5,4 @@ data/registry.json
 data/registry.json.tmp
 npm-debug.log*
 .DS_Store
+*.tsbuildinfo

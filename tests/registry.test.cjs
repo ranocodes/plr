@@ -1,7 +1,10 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const path = require("node:path");
+
 const source = fs.readFileSync(new URL("../lib/registry.ts", `file://${__filename}`), "utf8");
+const apiSource = fs.readFileSync(new URL("../app/api/registry/route.ts", `file://${__filename}`), "utf8");
 
 test("licence status logic uses the actual expiry date and 180-day boundary", () => {
   assert.match(source, /daysLeft <= 180/);
@@ -14,4 +17,19 @@ test("public verification payload is limited to registry details", () => {
   assert.match(publicFunction, /nannmId:/);
   assert.match(publicFunction, /licenseExpiry:/);
   assert.doesNotMatch(publicFunction, /email:|phone:|licenseNumber:|nin/i);
+});
+
+test("API registration enforces email and phone validations", () => {
+  assert.match(apiSource, /emailRegex/);
+  assert.match(apiSource, /phone\.length < 7/);
+  assert.match(apiSource, /\^\\d\{4\}-\\d\{2\}-\\d\{2\}\$/);
+});
+
+test("Audit logging appends entries and caps at 100", () => {
+  assert.match(source, /data\.audit\.slice\(0, 100\)/);
+  assert.match(source, /data\.audit\.unshift\(entry\)/);
+});
+
+test("NANNM ID issuance follows standard sequence format PL-YYYY-XXXX", () => {
+  assert.match(apiSource, /`PL-\$\{year\}-\$\{sequence\}`/);
 });
