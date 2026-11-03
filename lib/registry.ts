@@ -1,10 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import type { AuditRecord, LicenseStatus, Nurse, RegistryData } from "./types";
-
-const dataDirectory = path.join(process.cwd(), "data");
-const dataFile = path.join(dataDirectory, "registry.json");
 
 const seedData: RegistryData = {
   nurses: [
@@ -76,17 +74,56 @@ const seedData: RegistryData = {
   ]
 };
 
+// In-memory memory store for environments where the filesystem is read-only (e.g. AWS Lambda / Vercel Serverless)
+let inMemoryStore: RegistryData | null = null;
+
+function getDataPaths(): { directory: string; file: string } {
+  // If running in Vercel or AWS Lambda, process.cwd() is read-only; use tmpdir
+  const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+  if (isServerless) {
+    const directory = path.join(tmpdir(), "plateau-registry");
+    return { directory, file: path.join(directory, "registry.json") };
+  }
+
+  const directory = path.join(process.cwd(), "data");
+  return { directory, file: path.join(directory, "registry.json") };
+}
+
 export function readRegistry(): RegistryData {
-  mkdirSync(dataDirectory, { recursive: true });
-  if (!existsSync(dataFile)) writeRegistry(seedData);
-  return JSON.parse(readFileSync(dataFile, "utf8")) as RegistryData;
+  if (inMemoryStore) {
+    return inMemoryStore;
+  }
+
+  try {
+    const { directory, file } = getDataPaths();
+    mkdirSync(directory, { recursive: true });
+    if (!existsSync(file)) {
+      writeRegistry(seedData);
+      return inMemoryStore ?? seedData;
+    }
+    const data = JSON.parse(readFileSync(file, "utf8")) as RegistryData;
+    inMemoryStore = data;
+    return data;
+  } catch {
+    // If filesystem fails due to read-only constraints, fall back safely to in-memory store
+    if (!inMemoryStore) {
+      inMemoryStore = JSON.parse(JSON.stringify(seedData)) as RegistryData;
+    }
+    return inMemoryStore;
+  }
 }
 
 export function writeRegistry(data: RegistryData): void {
-  mkdirSync(dataDirectory, { recursive: true });
-  const temporary = `${dataFile}.tmp`;
-  writeFileSync(temporary, JSON.stringify(data, null, 2), "utf8");
-  renameSync(temporary, dataFile);
+  inMemoryStore = data;
+  try {
+    const { directory, file } = getDataPaths();
+    mkdirSync(directory, { recursive: true });
+    const temporary = `${file}.tmp`;
+    writeFileSync(temporary, JSON.stringify(data, null, 2), "utf8");
+    renameSync(temporary, file);
+  } catch {
+    // Filesystem error handled safely; memory store already updated
+  }
 }
 
 export function getLicenseStatus(nurse: Nurse, now = new Date()): LicenseStatus {

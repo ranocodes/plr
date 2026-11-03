@@ -1,7 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
-const path = require("node:path");
 
 const source = fs.readFileSync(new URL("../lib/registry.ts", `file://${__filename}`), "utf8");
 const apiSource = fs.readFileSync(new URL("../app/api/registry/route.ts", `file://${__filename}`), "utf8");
@@ -32,4 +31,10 @@ test("Audit logging appends entries and caps at 100", () => {
 
 test("NANNM ID issuance follows standard sequence format PL-YYYY-XXXX", () => {
   assert.match(apiSource, /`PL-\$\{year\}-\$\{sequence\}`/);
+});
+
+test("serverless and Vercel compatibility checks in lib/registry.ts", () => {
+  assert.match(source, /process\.env\.VERCEL/);
+  assert.match(source, /tmpdir\(\)/);
+  assert.match(source, /inMemoryStore/);
 });
