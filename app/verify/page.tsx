@@ -91,7 +91,16 @@ function IconCheck() {
 }
 
 function statusText(status: LicenseStatus) {
-  return ({ valid: "Valid", expiring: "Expiring soon", expired: "Expired", pending: "Pending", flagged: "Flagged", rejected: "Rejected" })[status];
+  return ({
+    valid: "Valid",
+    expiring: "Expiring soon",
+    expired: "Expired",
+    pending: "Pending",
+    flagged: "Flagged",
+    rejected: "Rejected",
+    suspended: "Suspended",
+    revoked: "Revoked"
+  })[status] ?? status;
 }
 
 function formatDate(value: string) {

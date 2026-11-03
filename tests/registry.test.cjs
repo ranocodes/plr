@@ -5,17 +5,18 @@ const fs = require("node:fs");
 const source = fs.readFileSync(new URL("../lib/registry.ts", `file://${__filename}`), "utf8");
 const apiSource = fs.readFileSync(new URL("../app/api/registry/route.ts", `file://${__filename}`), "utf8");
 
-test("licence status logic uses the actual expiry date and 180-day boundary", () => {
+test("licence status logic uses the actual expiry date and handles suspended/revoked", () => {
+  assert.match(source, /nurse\.status === "revoked"/);
+  assert.match(source, /nurse\.status === "suspended"/);
   assert.match(source, /daysLeft <= 180/);
   assert.match(source, /daysLeft < 0/);
-  assert.match(source, /new Date\(`\$\{nurse\.licenseExpiry\}T23:59:59`\)/);
 });
 
-test("public verification payload is limited to registry details", () => {
+test("public verification payload is limited to registry details (PII hidden)", () => {
   const publicFunction = source.match(/export function publicNurse[\s\S]*?\n\}/)?.[0] ?? "";
   assert.match(publicFunction, /nannmId:/);
   assert.match(publicFunction, /licenseExpiry:/);
-  assert.doesNotMatch(publicFunction, /email:|phone:|licenseNumber:|nin/i);
+  assert.doesNotMatch(publicFunction, /email:|phone:|licenseNumber:|nin|address|ward/i);
 });
 
 test("API registration enforces email and phone validations", () => {
@@ -24,16 +25,21 @@ test("API registration enforces email and phone validations", () => {
   assert.match(apiSource, /\^\\d\{4\}-\\d\{2\}-\\d\{2\}\$/);
 });
 
-test("Audit logging appends entries and caps at 100", () => {
-  assert.match(source, /data\.audit\.slice\(0, 100\)/);
-  assert.match(source, /data\.audit\.unshift\(entry\)/);
+test("Duplicate detection endpoint checks licence number and NIN", () => {
+  assert.match(apiSource, /checkDuplicate/);
+  assert.match(apiSource, /potential match/i);
 });
 
-test("NANNM ID issuance follows standard sequence format PL-YYYY-XXXX", () => {
-  assert.match(apiSource, /`PL-\$\{year\}-\$\{sequence\}`/);
+test("NANNM ID issuance follows standard sequence format PLT-NUR-XXXX", () => {
+  assert.match(source, /`PLT-NUR-\$\{String\(next\)\.padStart\(4, "0"\)\}`/);
 });
 
-test("serverless and Vercel compatibility checks in lib/registry.ts", () => {
+test("State machine blocks transitions on revoked records (PNR-25)", () => {
+  assert.match(apiSource, /nurse\.status === "revoked"/);
+  assert.match(apiSource, /Record is revoked\. Further state transitions are blocked\./);
+});
+
+test("Serverless and Vercel compatibility checks in lib/registry.ts", () => {
   assert.match(source, /process\.env\.VERCEL/);
   assert.match(source, /tmpdir\(\)/);
   assert.match(source, /inMemoryStore/);

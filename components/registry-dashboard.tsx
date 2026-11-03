@@ -24,22 +24,36 @@ export default function RegistryDashboard({ initialData }: Props) {
   const [filter, setFilter] = useState("all");
   const [role, setRole] = useState<UserRole>("officer");
   const [selected, setSelected] = useState<Nurse | null>(null);
-  const [modal, setModal] = useState<"register" | "review" | "renewal" | null>(null);
+  const [modal, setModal] = useState<"register" | "review" | "renewal" | "suspend" | "revoke" | null>(null);
   const [toast, setToast] = useState("");
   const [busy, setBusy] = useState(false);
   const [noticeFilter, setNoticeFilter] = useState("all");
 
-  const enriched = useMemo(() => data.nurses.map((nurse) => ({ nurse, licenseStatus: getStatus(nurse) })), [data.nurses]);
-  const pendingCount = data.nurses.filter((nurse) => nurse.status === "pending").length;
+  // In HR view (PNR-17), scope list to the HR facility / employer
+  const hrFacility = "Plateau Specialist Hospital";
+
+  const enriched = useMemo(() => {
+    let list = data.nurses;
+    if (role === "hr") {
+      list = list.filter((n) => n.facility.toLowerCase().includes(hrFacility.toLowerCase()));
+    }
+    return list.map((nurse) => ({ nurse, licenseStatus: getStatus(nurse) }));
+  }, [data.nurses, role]);
+
+  const pendingCount = enriched.filter(({ nurse }) => nurse.status === "pending").length;
   const approved = enriched.filter(({ nurse }) => nurse.status === "approved");
   const validCount = approved.filter(({ licenseStatus }) => licenseStatus === "valid").length;
   const expiringCount = approved.filter(({ licenseStatus }) => licenseStatus === "expiring").length;
   const expiredCount = approved.filter(({ licenseStatus }) => licenseStatus === "expired").length;
 
   const filteredNurses = enriched.filter(({ nurse, licenseStatus }) => {
-    const text = `${nurse.firstName} ${nurse.lastName} ${nurse.nannmId ?? ""} ${nurse.facility} ${nurse.licenseNumber}`.toLowerCase();
+    const text = `${nurse.firstName} ${nurse.lastName} ${nurse.nannmId ?? ""} ${nurse.facility} ${nurse.licenseNumber} ${nurse.ward ?? ""}`.toLowerCase();
     const matchesText = text.includes(query.toLowerCase());
-    const matchesStatus = filter === "all" || nurse.status === filter || (filter === "expiring" && licenseStatus === "expiring") || (filter === "expired" && licenseStatus === "expired");
+    const matchesStatus =
+      filter === "all" ||
+      nurse.status === filter ||
+      (filter === "expiring" && licenseStatus === "expiring") ||
+      (filter === "expired" && licenseStatus === "expired");
     const matchesRenewal = view !== "renewals" || (nurse.status === "approved" && licenseStatus !== "valid");
     return matchesText && matchesStatus && matchesRenewal;
   });
@@ -98,6 +112,9 @@ export default function RegistryDashboard({ initialData }: Props) {
               {item.id === "registry" && pendingCount > 0 && <span className="nav-count">{pendingCount}</span>}
             </button>
           ))}
+          <Link href="/register" className="nav-item" style={{ marginTop: "0.5rem", borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "0.75rem" }}>
+            <span style={{ fontSize: "1.1rem" }}>+</span><span>Officer Intake (PNR-07)</span>
+          </Link>
         </nav>
         <div className="sidebar-bottom">
           <div className="sidebar-callout">
@@ -106,6 +123,7 @@ export default function RegistryDashboard({ initialData }: Props) {
             <p>Plateau State Nurse Registry Management System.</p>
           </div>
           <Link href="/verify" className="public-link"><Icon name="external" /> Open public verifier <span>↗</span></Link>
+          <Link href="/register" className="public-link" style={{ color: "#34d399" }}><Icon name="people" /> Full registration page <span>↗</span></Link>
           <div className="profile-strip"><div className="avatar">BM</div><div><strong>{roleLabel(role)}</strong><small>Plateau Registry</small></div><span className="more">···</span></div>
         </div>
       </aside>
@@ -216,18 +234,149 @@ export default function RegistryDashboard({ initialData }: Props) {
         </div>
       </main>
 
-      {selected && !modal && <ProfilePanel nurse={selected} status={getStatus(selected)} role={role} notifications={data.notifications.filter((notice) => notice.nurseId === selected.id)} onClose={() => setSelected(null)} onReview={() => setModal("review")} onRenew={() => setModal("renewal")} onConfirm={() => void action({ action: "employer-confirm", id: selected.id }, "Employer confirmation recorded.")} onNotice={(type) => void action({ action: "simulate-notice", id: selected.id, type }, "Reminder logged — no email was sent.")} />}
-      {modal === "register" && <Modal title="Register a nurse" eyebrow="NEW REGISTRATION" onClose={() => setModal(null)}><form className="form-grid" onSubmit={register}>
-        <FormField label="First name" name="firstName" required /><FormField label="Last name" name="lastName" required />
-        <FormField label="Email address" name="email" type="email" required /><FormField label="Phone number" name="phone" type="tel" required />
-        <FormField label="LGA" name="lga" required /><FormField label="Facility" name="facility" required />
-        <label className="form-field"><span>Professional category</span><select name="category" required defaultValue=""><option value="" disabled>Select category</option><option>Registered Nurse</option><option>Midwife</option><option>Nurse Educator</option><option>Community Health Nurse</option></select></label>
-        <FormField label="Licence number" name="licenseNumber" required /><FormField label="Printed expiry date" name="licenseExpiry" type="date" required />
-        <p className="form-disclaimer">Registrations enter the officer review queue before approval and NANNM ID issuance.</p>
-        <div className="modal-actions"><button type="button" className="button button-quiet" onClick={() => setModal(null)}>Cancel</button><button type="submit" className="button button-primary" disabled={busy}>{busy ? "Saving…" : "Add to review queue"}</button></div>
-      </form></Modal>}
-      {modal === "review" && selected && <Modal title={`${selected.firstName} ${selected.lastName}`} eyebrow="MANUAL REVIEW" onClose={() => setModal(null)}><div className="review-summary"><Avatar nurse={selected} /><div><strong>{selected.category}</strong><span>{selected.licenseNumber} · Expires {formatDate(selected.licenseExpiry)}</span><small>{selected.facility}, {selected.lga}</small></div><span className={`pill ${selected.status}`}>{statusText(selected.status)}</span></div><form onSubmit={review}><label className="form-field"><span>Decision</span><select name="decision" defaultValue={selected.status === "flagged" ? "flagged" : "approved"}><option value="approved">Approve and issue NANNM ID</option><option value="flagged">Flag for further checks</option><option value="rejected">Reject registration</option></select></label><label className="form-field notes-field"><span>Review note <small>Optional</small></span><textarea name="notes" defaultValue={selected.notes} placeholder="Record the reason for this decision…" rows={3} /></label><p className="form-disclaimer">Approval generates a unique Plateau NANNM identification number and public lookup QR code.</p><div className="modal-actions"><button type="button" className="button button-quiet" onClick={() => setModal(null)}>Cancel</button><button type="submit" className="button button-primary" disabled={busy}>{busy ? "Saving…" : "Save review decision"}</button></div></form></Modal>}
-      {modal === "renewal" && selected && <Modal title="Record renewal" eyebrow="LICENCE RENEWAL" onClose={() => setModal(null)}><p className="modal-copy">Submit a new printed expiry date for {selected.firstName} {selected.lastName}. The record will return to manual review.</p><form onSubmit={(event) => { event.preventDefault(); const value = new FormData(event.currentTarget).get("licenseExpiry"); if (typeof value === "string") void action({ action: "renew", id: selected.id, licenseExpiry: value }, "Renewal saved and sent to manual review."); }}><FormField label="New printed expiry date" name="licenseExpiry" type="date" required defaultValue={selected.licenseExpiry} /><div className="modal-actions"><button type="button" className="button button-quiet" onClick={() => setModal(null)}>Cancel</button><button type="submit" className="button button-primary" disabled={busy}>{busy ? "Saving…" : "Submit renewal"}</button></div></form></Modal>}
+      {selected && !modal && (
+        <ProfilePanel
+          nurse={selected}
+          status={getStatus(selected)}
+          role={role}
+          notifications={data.notifications.filter((notice) => notice.nurseId === selected.id)}
+          onClose={() => setSelected(null)}
+          onReview={() => setModal("review")}
+          onRenew={() => setModal("renewal")}
+          onSuspend={() => setModal("suspend")}
+          onRevoke={() => setModal("revoke")}
+          onReinstate={() => void action({ action: "review", id: selected.id, decision: "reinstate", actor: roleLabel(role) }, "NANNM ID successfully reinstated.")}
+          onConfirm={() => void action({ action: "employer-confirm", id: selected.id }, "Employer confirmation recorded.")}
+          onNotice={(type) => void action({ action: "simulate-notice", id: selected.id, type }, "Reminder logged and recorded.")}
+        />
+      )}
+
+      {modal === "register" && (
+        <Modal title="Register a nurse" eyebrow="NEW REGISTRATION (PNR-07)" onClose={() => setModal(null)}>
+          <form className="form-grid" onSubmit={register}>
+            <FormField label="First name" name="firstName" required />
+            <FormField label="Last name" name="lastName" required />
+            <FormField label="Email address" name="email" type="email" required />
+            <FormField label="Phone number" name="phone" type="tel" required />
+            <FormField label="NIN" name="nin" placeholder="11 digits (stored masked)" />
+            <FormField label="LGA" name="lga" required />
+            <FormField label="Ward" name="ward" />
+            <FormField label="Facility" name="facility" required />
+            <label className="form-field">
+              <span>Professional category</span>
+              <select name="category" required defaultValue="Registered Nurse">
+                <option>Registered Nurse</option>
+                <option>Midwife</option>
+                <option>Nurse Educator</option>
+                <option>Community Health Nurse</option>
+              </select>
+            </label>
+            <FormField label="Licence number" name="licenseNumber" required />
+            <FormField label="Printed expiry date" name="licenseExpiry" type="date" required />
+            <p className="form-disclaimer">Registrations enter the officer review queue with informed consent acknowledged.</p>
+            <div className="modal-actions">
+              <button type="button" className="button button-quiet" onClick={() => setModal(null)}>Cancel</button>
+              <button type="submit" className="button button-primary" disabled={busy}>{busy ? "Saving…" : "Add to review queue"}</button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {modal === "review" && selected && (
+        <Modal title={`${selected.firstName} ${selected.lastName}`} eyebrow="MANUAL REVIEW (PNR-11)" onClose={() => setModal(null)}>
+          <div className="review-summary">
+            <Avatar nurse={selected} />
+            <div>
+              <strong>{selected.category}</strong>
+              <span>{selected.licenseNumber} · Expires {formatDate(selected.licenseExpiry)}</span>
+              <small>{selected.facility}, {selected.lga}</small>
+            </div>
+            <span className={`pill ${selected.status}`}>{statusText(selected.status)}</span>
+          </div>
+          <form onSubmit={review}>
+            <label className="form-field">
+              <span>Decision</span>
+              <select name="decision" defaultValue={selected.status === "flagged" ? "flagged" : "approved"}>
+                <option value="approved">Approve and issue NANNM ID</option>
+                <option value="flagged">Flag for further checks</option>
+                <option value="rejected">Reject registration</option>
+              </select>
+            </label>
+            <label className="form-field notes-field">
+              <span>Review note / Reason * <small>Required for reject or flag</small></span>
+              <textarea name="notes" defaultValue={selected.notes} placeholder="Record the reason for this decision…" rows={3} />
+            </label>
+            <p className="form-disclaimer">Approval assigns a unique NANNM ID (PLT-NUR-XXXX) and activates verification.</p>
+            <div className="modal-actions">
+              <button type="button" className="button button-quiet" onClick={() => setModal(null)}>Cancel</button>
+              <button type="submit" className="button button-primary" disabled={busy}>{busy ? "Saving…" : "Save review decision"}</button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {modal === "suspend" && selected && (
+        <Modal title={`Suspend ${selected.firstName} ${selected.lastName}`} eyebrow="SUSPEND NANNM ID (PNR-25)" onClose={() => setModal(null)}>
+          <p className="modal-copy">Suspending this record immediately displays &apos;Suspended&apos; on public verification until reinstated.</p>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            const reason = String(new FormData(e.currentTarget).get("reason") ?? "");
+            void action({ action: "review", id: selected.id, decision: "suspended", reason }, "NANNM ID suspended.");
+          }}>
+            <label className="form-field">
+              <span>Suspension Reason *</span>
+              <textarea name="reason" required placeholder="State the reason for suspension (e.g. licence inquiry pending)..." rows={3} />
+            </label>
+            <div className="modal-actions">
+              <button type="button" className="button button-quiet" onClick={() => setModal(null)}>Cancel</button>
+              <button type="submit" className="button button-primary" style={{ background: "var(--amber-primary)" }} disabled={busy}>
+                {busy ? "Suspending…" : "Confirm Suspension"}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {modal === "revoke" && selected && (
+        <Modal title={`Revoke ${selected.firstName} ${selected.lastName}`} eyebrow="REVOKE NANNM ID (PNR-25)" onClose={() => setModal(null)}>
+          <p className="modal-copy" style={{ color: "var(--red-primary)" }}>
+            Warning: Revocation is a permanent disciplinary action. Once revoked, all further status transitions are locked.
+          </p>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            const reason = String(new FormData(e.currentTarget).get("reason") ?? "");
+            void action({ action: "review", id: selected.id, decision: "revoked", reason }, "NANNM ID permanently revoked.");
+          }}>
+            <label className="form-field">
+              <span>Revocation Reason *</span>
+              <textarea name="reason" required placeholder="State the documented cause for revocation (e.g. fraudulent credentials)..." rows={3} />
+            </label>
+            <div className="modal-actions">
+              <button type="button" className="button button-quiet" onClick={() => setModal(null)}>Cancel</button>
+              <button type="submit" className="button button-primary" style={{ background: "var(--red-primary)" }} disabled={busy}>
+                {busy ? "Revoking…" : "Permanently Revoke NANNM ID"}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {modal === "renewal" && selected && (
+        <Modal title="Record renewal" eyebrow="LICENCE RENEWAL (PNR-19)" onClose={() => setModal(null)}>
+          <p className="modal-copy">Submit a new printed expiry date for {selected.firstName} {selected.lastName}. The record will return to supervisor review.</p>
+          <form onSubmit={(event) => {
+            event.preventDefault();
+            const value = new FormData(event.currentTarget).get("licenseExpiry");
+            if (typeof value === "string") void action({ action: "renew", id: selected.id, licenseExpiry: value }, "Renewal saved and sent to supervisor review.");
+          }}>
+            <FormField label="New printed expiry date" name="licenseExpiry" type="date" required defaultValue={selected.licenseExpiry} />
+            <div className="modal-actions">
+              <button type="button" className="button button-quiet" onClick={() => setModal(null)}>Cancel</button>
+              <button type="submit" className="button button-primary" disabled={busy}>{busy ? "Saving…" : "Submit renewal"}</button>
+            </div>
+          </form>
+        </Modal>
+      )}
       {toast && <div className="toast" role="status">{toast}</div>}
       <div className="mobile-bottom-nav">{navigation.slice(0, 4).map((item) => <button key={item.id} className={view === item.id ? "active" : ""} onClick={() => showView(item.id)}><Icon name={item.icon} /><span>{item.label}</span></button>)}</div>
     </div>
@@ -243,26 +392,158 @@ function NurseTable({ nurses, statuses, onSelect, renewal, onRenew }: { nurses: 
   return <div className="table-scroll"><table className="nurse-table"><thead><tr><th>NURSE</th><th>NANNM ID</th><th>FACILITY</th><th>LICENCE STATUS</th><th>EXPIRY DATE</th><th aria-label="Actions" /></tr></thead><tbody>{nurses.map((nurse, index) => <tr key={nurse.id} onClick={() => onSelect(nurse)}><td><span className="table-person"><Avatar nurse={nurse} /><span><strong>{nurse.firstName} {nurse.lastName}</strong><small>{nurse.category}</small></span></span></td><td className="id-cell">{nurse.nannmId ?? "—"}</td><td className="facility-cell">{nurse.facility}</td><td><span className={`table-status ${nurse.status === "approved" ? statuses[index] : nurse.status}`}><i />{statusText(nurse.status === "approved" ? statuses[index] : nurse.status)}</span></td><td className="expiry-cell">{formatDate(nurse.licenseExpiry)}</td><td>{renewal && nurse.status === "approved" && onRenew ? <button className="small-action" onClick={(event) => { event.stopPropagation(); onRenew(nurse); }}>Renew</button> : <span className="table-arrow">↗</span>}</td></tr>)}</tbody></table></div>;
 }
 
-function ProfilePanel({ nurse, status, role, notifications, onClose, onReview, onRenew, onConfirm, onNotice }: { nurse: Nurse; status: LicenseStatus; role: UserRole; notifications: NotificationRecord[]; onClose: () => void; onReview: () => void; onRenew: () => void; onConfirm: () => void; onNotice: (type: string) => void }) {
+function ProfilePanel({
+  nurse,
+  status,
+  role,
+  notifications,
+  onClose,
+  onReview,
+  onRenew,
+  onSuspend,
+  onRevoke,
+  onReinstate,
+  onConfirm,
+  onNotice
+}: {
+  nurse: Nurse;
+  status: LicenseStatus;
+  role: UserRole;
+  notifications: NotificationRecord[];
+  onClose: () => void;
+  onReview: () => void;
+  onRenew: () => void;
+  onSuspend: () => void;
+  onRevoke: () => void;
+  onReinstate: () => void;
+  onConfirm: () => void;
+  onNotice: (type: string) => void;
+}) {
   const canViewContact = role !== "hr";
-  return <div className="drawer-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><aside className="profile-drawer" aria-label="Nurse profile">
-    <div className="drawer-head"><span className="eyebrow">REGISTRY RECORD</span><button className="close-button" onClick={onClose} aria-label="Close profile">×</button></div>
-    <div className="profile-identity"><Avatar nurse={nurse} large /><h2>{nurse.firstName} {nurse.lastName}</h2><p>{nurse.category} <span>·</span> {nurse.lga}</p><span className={`pill ${nurse.status === "approved" ? status : nurse.status}`}>{statusText(nurse.status === "approved" ? status : nurse.status)}</span></div>
-    {nurse.nannmId && <div className="qr-card"><div className="qr-copy"><span className="eyebrow">NANNM IDENTIFICATION</span><strong>{nurse.nannmId}</strong><small>Scan to check public record</small></div><QRCodeSVG value={`${typeof window !== "undefined" ? window.location.origin : ""}/verify?id=${encodeURIComponent(nurse.nannmId)}`} size={86} level="M" /></div>}
-    <div className="profile-section"><h3>Professional details</h3><Detail label="Facility" value={nurse.facility} /><Detail label="Licence number" value={nurse.licenseNumber} /><Detail label="Expiry date" value={formatDate(nurse.licenseExpiry)} /><Detail label="Registered" value={formatDate(nurse.registeredAt)} /></div>
-    {canViewContact && <div className="profile-section"><h3>Contact details</h3><Detail label="Email" value={nurse.email} /><Detail label="Phone" value={nurse.phone} /><p className="profile-hint">Contact details are accessible to authorized registry officers.</p></div>}
-    {role === "hr" && <div className="hr-view-note"><strong>Employer view</strong><span>Healthcare employers verify active deployment and confirm institutional affiliation.</span><button className="button button-secondary full-button" onClick={onConfirm}>Confirm current employment</button><small>{nurse.lastEmployerConfirmedAt ? `Last confirmed ${formatDate(nurse.lastEmployerConfirmedAt)}` : "No employer confirmation on file"}</small></div>}
-    {role !== "hr" && <div className="profile-section"><h3>Review &amp; renewal</h3><Detail label="Reviewing officer" value={nurse.reviewedBy ?? "Not reviewed"} /><Detail label="Review note" value={nurse.notes || "No notes"} /><div className="profile-actions">{nurse.status !== "approved" && <button className="button button-primary full-button" onClick={onReview}>Review record</button>}{nurse.status === "approved" && <button className="button button-secondary full-button" onClick={onRenew}>Submit renewal</button>}<div className="notice-actions"><button onClick={() => onNotice("90-day")}>Log 90-day reminder</button><button onClick={() => onNotice("30-day")}>Log 30-day reminder</button></div></div></div>}
-    <div className="profile-section"><h3>Reminder history</h3>{notifications.length ? notifications.slice(0, 4).map((item) => <div className="mini-notice" key={item.id}><span>{noticeTitle(item.type)}</span><time>{formatDate(item.sentAt)}</time></div>) : <p className="empty-mini">No reminder history yet.</p>}</div>
-  </aside></div>;
+  const isSupervisorOrAdmin = role === "supervisor" || role === "super-admin";
+
+  return (
+    <div className="drawer-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <aside className="profile-drawer" aria-label="Nurse profile">
+        <div className="drawer-head"><span className="eyebrow">REGISTRY RECORD</span><button className="close-button" onClick={onClose} aria-label="Close profile">×</button></div>
+        <div className="profile-identity">
+          <Avatar nurse={nurse} large />
+          <h2>{nurse.firstName} {nurse.lastName}</h2>
+          <p>{nurse.category} <span>·</span> {nurse.facility}</p>
+          <span className={`pill ${nurse.status === "approved" ? status : nurse.status}`}>
+            {statusText(nurse.status === "approved" ? status : nurse.status)}
+          </span>
+          {nurse.statusReason && <small style={{ color: "var(--red-primary)", marginTop: "0.2rem" }}>Reason: {nurse.statusReason}</small>}
+        </div>
+
+        {nurse.nannmId && (
+          <div className="qr-card">
+            <div className="qr-copy">
+              <span className="eyebrow">NANNM IDENTIFICATION</span>
+              <strong>{nurse.nannmId}</strong>
+              <small>Scan to check public standing</small>
+              <Link href={`/card/${encodeURIComponent(nurse.nannmId)}`} className="text-button" style={{ marginTop: "0.5rem", display: "inline-block" }}>
+                Printable ID Card (PNR-13) ↗
+              </Link>
+            </div>
+            <QRCodeSVG value={`${typeof window !== "undefined" ? window.location.origin : ""}/verify?id=${encodeURIComponent(nurse.nannmId)}`} size={86} level="M" />
+          </div>
+        )}
+
+        <div className="profile-section">
+          <h3>Professional details</h3>
+          <Detail label="Facility" value={nurse.facility} />
+          <Detail label="LGA / Ward" value={`${nurse.lga}${nurse.ward ? ` / ${nurse.ward}` : ""}`} />
+          <Detail label="Licence number" value={nurse.licenseNumber} />
+          <Detail label="Expiry date" value={formatDate(nurse.licenseExpiry)} />
+          <Detail label="Registered" value={formatDate(nurse.registeredAt)} />
+          {nurse.ninLast4 && <Detail label="NIN" value={`*******${nurse.ninLast4} (Masked PNR-03)`} />}
+        </div>
+
+        {canViewContact && (
+          <div className="profile-section">
+            <h3>Contact details</h3>
+            <Detail label="Email" value={nurse.email} />
+            <Detail label="Phone" value={nurse.phone} />
+          </div>
+        )}
+
+        {role === "hr" && (
+          <div className="hr-view-note">
+            <strong>Employer view (PNR-17)</strong>
+            <span>Healthcare employers confirm institutional affiliation and verified employment.</span>
+            <button className="button button-secondary full-button" onClick={onConfirm}>Confirm current employment (PNR-18)</button>
+            <small>{nurse.lastEmployerConfirmedAt ? `Last confirmed ${formatDate(nurse.lastEmployerConfirmedAt)}${nurse.lastEmployerConfirmedBy ? ` by ${nurse.lastEmployerConfirmedBy}` : ""}` : "No employer confirmation on file"}</small>
+          </div>
+        )}
+
+        {role !== "hr" && (
+          <div className="profile-section">
+            <h3>Review &amp; lifecycle (PNR-11, PNR-25)</h3>
+            <Detail label="Reviewing officer" value={nurse.reviewedBy ?? "Not reviewed"} />
+            <Detail label="Review note" value={nurse.notes || "No notes"} />
+
+            <div className="profile-actions">
+              {nurse.status === "pending" && <button className="button button-primary full-button" onClick={onReview}>Review &amp; Approve</button>}
+              {nurse.status === "flagged" && <button className="button button-primary full-button" onClick={onReview}>Review Flagged Record</button>}
+              {nurse.status === "approved" && <button className="button button-secondary full-button" onClick={onRenew}>Submit Renewal (PNR-19)</button>}
+
+              {isSupervisorOrAdmin && nurse.status === "approved" && (
+                <div style={{ display: "flex", gap: "0.5rem" }}>
+                  <button className="button button-quiet" style={{ color: "var(--amber-primary)", flex: 1, border: "1px solid var(--amber-border)" }} onClick={onSuspend}>
+                    Suspend ID (PNR-25)
+                  </button>
+                  <button className="button button-quiet" style={{ color: "var(--red-primary)", flex: 1, border: "1px solid var(--red-border)" }} onClick={onRevoke}>
+                    Revoke ID (PNR-25)
+                  </button>
+                </div>
+              )}
+
+              {isSupervisorOrAdmin && nurse.status === "suspended" && (
+                <div style={{ display: "flex", gap: "0.5rem" }}>
+                  <button className="button button-primary" style={{ flex: 1 }} onClick={onReinstate}>
+                    Reinstate to Approved
+                  </button>
+                  <button className="button button-quiet" style={{ color: "var(--red-primary)", flex: 1, border: "1px solid var(--red-border)" }} onClick={onRevoke}>
+                    Revoke ID
+                  </button>
+                </div>
+              )}
+
+              {nurse.status === "revoked" && (
+                <div style={{ padding: "0.5rem", background: "var(--red-subtle)", color: "var(--red-primary)", borderRadius: "var(--radius-sm)", fontSize: "0.8rem", textAlign: "center", fontWeight: 600 }}>
+                  Record is permanently revoked. No further actions permitted.
+                </div>
+              )}
+
+              <div className="notice-actions">
+                <button onClick={() => onNotice("90-day")}>Log 90-day notice</button>
+                <button onClick={() => onNotice("30-day")}>Log 30-day notice</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="profile-section">
+          <h3>Notification log</h3>
+          {notifications.length ? notifications.slice(0, 4).map((item) => (
+            <div className="mini-notice" key={item.id}>
+              <span>{noticeTitle(item.type)}</span>
+              <time>{formatDate(item.sentAt)}</time>
+            </div>
+          )) : <p className="empty-mini">No notification history yet.</p>}
+        </div>
+      </aside>
+    </div>
+  );
 }
 
 function Modal({ title, eyebrow, onClose, children }: { title: string; eyebrow: string; onClose: () => void; children: React.ReactNode }) {
   return <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="modal" role="dialog" aria-modal="true" aria-label={title}><div className="modal-head"><span className="eyebrow">{eyebrow}</span><button className="close-button" onClick={onClose} aria-label="Close">×</button></div><h2>{title}</h2>{children}</section></div>;
 }
 
-function FormField({ label, name, type = "text", required, defaultValue }: { label: string; name: string; type?: string; required?: boolean; defaultValue?: string }) {
-  return <label className="form-field"><span>{label}</span><input name={name} type={type} required={required} defaultValue={defaultValue} /></label>;
+function FormField({ label, name, type = "text", required, defaultValue, placeholder }: { label: string; name: string; type?: string; required?: boolean; defaultValue?: string; placeholder?: string }) {
+  return <label className="form-field"><span>{label}</span><input name={name} type={type} required={required} defaultValue={defaultValue} placeholder={placeholder} /></label>;
 }
 
 function AuditRow({ entry }: { entry: AuditRecord }) {
