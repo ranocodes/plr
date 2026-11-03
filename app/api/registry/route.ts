@@ -35,9 +35,18 @@ export async function POST(request: Request) {
     if (required.some((key) => typeof body[key] !== "string" || !(body[key] as string).trim())) {
       return Response.json({ error: "Complete every required registration field." }, { status: 400 });
     }
-    const expiry = String(body.licenseExpiry);
+    const email = String(body.email).trim().toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return Response.json({ error: "Enter a valid email address." }, { status: 400 });
+    }
+    const phone = String(body.phone).trim();
+    if (phone.length < 7 || phone.length > 20) {
+      return Response.json({ error: "Enter a valid phone number." }, { status: 400 });
+    }
+    const expiry = String(body.licenseExpiry).trim();
     if (!/^\d{4}-\d{2}-\d{2}$/.test(expiry) || Number.isNaN(new Date(`${expiry}T00:00:00`).getTime())) {
-      return Response.json({ error: "Enter a valid licence expiry date." }, { status: 400 });
+      return Response.json({ error: "Enter a valid licence expiry date in YYYY-MM-DD format." }, { status: 400 });
     }
     const nurse: Nurse = {
       id: randomUUID(), nannmId: null,
